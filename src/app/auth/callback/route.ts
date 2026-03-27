@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -8,29 +7,31 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get('token_hash');
   const type = searchParams.get('type');
 
-  const cookieStore = await cookies();
+  const redirectTo = `${origin}/`;
+  const response = NextResponse.redirect(redirectTo);
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (c: { name: string; value: string; options?: object }[]) =>
-          c.forEach(({ name, value, options }) => cookieStore.set(name, value, options as never)),
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookies: { name: string; value: string; options?: object }[]) =>
+          cookies.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options as never)
+          ),
       },
     }
   );
 
-  // PKCE flow (code exchange)
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}/`);
+    if (!error) return response;
   }
 
-  // OTP / magic link flow (token_hash)
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({ type: type as 'email', token_hash });
-    if (!error) return NextResponse.redirect(`${origin}/`);
+    if (!error) return response;
   }
 
   return NextResponse.redirect(`${origin}/login?error=invalid_link`);
