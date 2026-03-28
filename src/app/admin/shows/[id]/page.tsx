@@ -81,12 +81,18 @@ export default function AdminShowDetailPage() {
   }
 
   async function toggleParticipant(p: Participant) {
-    await fetch(`/api/shows/${id}/participants/${p.id}`, {
+    // Optimistically update UI immediately
+    setParticipants((prev) => prev.map((x) => x.id === p.id ? { ...x, is_active: !p.is_active } : x));
+    const res = await fetch(`/api/shows/${id}/participants/${p.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !p.is_active }),
     });
-    load();
+    if (!res.ok) {
+      // Revert on failure
+      setParticipants((prev) => prev.map((x) => x.id === p.id ? { ...x, is_active: p.is_active } : x));
+      alert('Failed to update status: ' + (await res.json()).error);
+    }
   }
 
   async function deleteParticipant(pid: string) {
