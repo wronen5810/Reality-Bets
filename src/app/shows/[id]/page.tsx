@@ -26,26 +26,24 @@ export default async function ShowPage({ params }: { params: Promise<{ id: strin
     supabase.from('episodes').select('*').eq('show_id', id).order('episode_number'),
     supabase.from('participants').select('*').eq('show_id', id),
     supabase.from('points').select('user_email, points').eq('show_id', id),
-    supabase.from('allowed_users').select('email, display_name'),
+    supabase.from('allowed_users').select('email, display_name, is_active'),
     supabase.from('bets').select('*').eq('user_email', auth.user.email),
   ]);
 
   if (!show) return notFound();
 
-  // Build leaderboard
-  const userMap = new Map<string, string>((users ?? []).map((u: { email: string; display_name: string }) => [u.email, u.display_name]));
+  // Build leaderboard — include ALL active users, even those with 0 points
   const agg = new Map<string, { total: number; count: number }>();
   for (const p of pts ?? []) {
     const cur = agg.get(p.user_email) ?? { total: 0, count: 0 };
     agg.set(p.user_email, { total: cur.total + p.points, count: cur.count + 1 });
   }
-  const leaderboard: LeaderboardEntry[] = Array.from(agg.entries())
-    .map(([email, { total, count }]) => ({
-      user_email: email,
-      display_name: userMap.get(email) ?? email,
-      total_points: total,
-      episodes_bet: count,
-    }))
+  const leaderboard: LeaderboardEntry[] = (users ?? [])
+    .filter((u: { email: string; display_name: string; is_active: boolean }) => u.is_active)
+    .map((u: { email: string; display_name: string }) => {
+      const { total = 0, count = 0 } = agg.get(u.email) ?? {};
+      return { user_email: u.email, display_name: u.display_name, total_points: total, episodes_bet: count };
+    })
     .sort((a, b) => b.total_points - a.total_points);
 
   const participantMap = new Map((participants as Participant[])?.map((p) => [p.id, p.name]));
