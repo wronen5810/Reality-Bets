@@ -65,8 +65,8 @@ export default function AdminShowDetailPage() {
     setEditing((prev) => ({ ...prev, [p.id]: { name: p.name, photo_url: p.photo_url ?? '' } }));
   }
 
-  function cancelEdit(id: string) {
-    setEditing((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  function cancelEdit(pid: string) {
+    setEditing((prev) => { const n = { ...prev }; delete n[pid]; return n; });
   }
 
   async function saveEdit(p: Participant) {
@@ -77,7 +77,7 @@ export default function AdminShowDetailPage() {
       body: JSON.stringify({ name: ed.name, photo_url: ed.photo_url || null }),
     });
     cancelEdit(p.id);
-    load();
+    await load();
   }
 
   async function toggleParticipant(p: Participant) {
@@ -230,13 +230,14 @@ export default function AdminShowDetailPage() {
                       <span className={`flex-1 text-sm font-medium ${!p.is_active ? 'line-through text-gray-400' : ''}`} dir="rtl">{p.name}</span>
                       <div className="flex gap-2 shrink-0 items-center">
                         <button
+                          type="button"
                           onClick={() => toggleParticipant(p)}
                           className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}
                         >
                           {p.is_active ? 'Active' : 'Eliminated'}
                         </button>
-                        <button onClick={() => startEdit(p)} className="text-xs text-indigo-600 hover:underline">Edit</button>
-                        <button onClick={() => deleteParticipant(p.id)} className="text-xs text-red-500 hover:underline">Delete</button>
+                        <button type="button" onClick={() => startEdit(p)} className="text-xs text-indigo-600 hover:underline">Edit</button>
+                        <button type="button" onClick={() => deleteParticipant(p.id)} className="text-xs text-red-500 hover:underline">Delete</button>
                       </div>
                     </div>
                   )}
