@@ -35,7 +35,10 @@ export default function ResolveEpisodePage() {
     const res = await fetch(`/api/shows/${id}/episodes/${eid}/resolve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eliminated_participant_id: eliminated, winner_participant_id: winner }),
+      body: JSON.stringify({
+        eliminated_participant_id: eliminated === 'none' ? null : eliminated,
+        winner_participant_id: winner === 'none' ? null : winner,
+      }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -76,7 +79,8 @@ export default function ResolveEpisodePage() {
               onChange={(e) => setEliminated(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">Select participant…</option>
+              <option value="">Select…</option>
+              <option value="none">אף אחד (no one)</option>
               {participants.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -90,7 +94,8 @@ export default function ResolveEpisodePage() {
               onChange={(e) => setWinner(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">Select participant…</option>
+              <option value="">Select…</option>
+              <option value="none">אף אחד (no one)</option>
               {participants.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}

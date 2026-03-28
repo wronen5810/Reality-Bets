@@ -11,9 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { eid, id: showId } = await params;
   const { eliminated_participant_id, winner_participant_id } = await request.json();
 
-  if (!eliminated_participant_id || !winner_participant_id) {
-    return NextResponse.json({ error: 'Both eliminated and winner participants are required' }, { status: 400 });
-  }
+  // null means "no one" — allowed for episodes with no elimination or no winner
 
   const supabase = createServiceSupabase();
 
