@@ -36,6 +36,12 @@ export default function AdminShowsPage() {
     }
   }
 
+  async function deleteShow(id: string) {
+    if (!confirm('Delete this show and all its data? This cannot be undone.')) return;
+    await fetch(`/api/shows/${id}`, { method: 'DELETE' });
+    load();
+  }
+
   async function toggleActive(show: Show) {
     await fetch(`/api/shows/${show.id}`, {
       method: 'PATCH',
@@ -93,6 +99,9 @@ export default function AdminShowsPage() {
               <Link href={`/admin/shows/${show.id}`} className="text-sm text-indigo-600 hover:underline">
                 Manage →
               </Link>
+              <button onClick={() => deleteShow(show.id)} className="text-sm text-red-500 hover:text-red-700">
+                Delete
+              </button>
             </div>
           </div>
         ))}
