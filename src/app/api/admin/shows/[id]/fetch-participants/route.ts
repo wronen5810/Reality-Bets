@@ -21,15 +21,20 @@ const KNOWN_SHOWS: Record<string, { name: string; photo_url: string | null }[]> 
   ],
 };
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest) {
   const auth = await requireAdmin();
   if ('error' in auth) return auth.error;
 
   const { showName } = await request.json();
-  const participants = KNOWN_SHOWS[showName] ?? null;
+
+  // Try exact match first, then case-insensitive partial match
+  const key = Object.keys(KNOWN_SHOWS).find(
+    (k) => k === showName || k.toLowerCase().includes(showName.toLowerCase()) || showName.toLowerCase().includes(k.toLowerCase())
+  );
+  const participants = key ? KNOWN_SHOWS[key] : null;
 
   if (!participants) {
-    return NextResponse.json({ error: 'No participant data found for this show' }, { status: 404 });
+    return NextResponse.json({ error: `No participant data found for "${showName}"` }, { status: 404 });
   }
 
   return NextResponse.json(participants);
