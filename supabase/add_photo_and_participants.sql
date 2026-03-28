@@ -1,8 +1,11 @@
 -- Add photo_url to participants
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS photo_url text;
 
+-- Remove all existing participants for this show
+DELETE FROM participants
+WHERE show_id = (SELECT id FROM shows WHERE name = 'המירוץ למיליון 2026');
+
 -- Insert המירוץ למיליון 2026 participants
--- Run this AFTER running schema.sql and creating the show in the admin panel
 INSERT INTO participants (show_id, name, photo_url)
 SELECT s.id, p.name, p.photo_url
 FROM shows s

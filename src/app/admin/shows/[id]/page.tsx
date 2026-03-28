@@ -5,15 +5,28 @@ import Link from 'next/link';
 import type { Show, Participant, Episode } from '@/lib/types';
 import { format } from 'date-fns';
 
+function PhotoPreview({ url }: { url: string }) {
+  if (!url) return <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-lg">👤</div>;
+  return <img src={url} alt="" className="w-10 h-10 rounded-full object-cover bg-gray-200" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />;
+}
+
 export default function AdminShowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [show, setShow] = useState<Show | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
 
-  // Participant form
+  // Add participant form
   const [pName, setPName] = useState('');
+  const [pPhoto, setPPhoto] = useState('');
   const [pLoading, setPLoading] = useState(false);
+
+  // Edit state: participantId → {name, photo_url}
+  const [editing, setEditing] = useState<Record<string, { name: string; photo_url: string }>>({});
+
+  // Fetch loading
+  const [fetching, setFetching] = useState(false);
+  const [fetchMsg, setFetchMsg] = useState('');
 
   // Episode form
   const [epNumber, setEpNumber] = useState('');
@@ -40,19 +53,65 @@ export default function AdminShowDetailPage() {
     await fetch(`/api/shows/${id}/participants`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: pName }),
+      body: JSON.stringify({ name: pName, photo_url: pPhoto || null }),
     });
     setPName('');
+    setPPhoto('');
     setPLoading(false);
     load();
   }
 
-  async function toggleParticipant(p: Participant) {
+  function startEdit(p: Participant) {
+    setEditing((prev) => ({ ...prev, [p.id]: { name: p.name, photo_url: p.photo_url ?? '' } }));
+  }
+
+  function cancelEdit(id: string) {
+    setEditing((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  }
+
+  async function saveEdit(p: Participant) {
+    const ed = editing[p.id];
     await fetch(`/api/shows/${id}/participants/${p.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_active: !p.is_active }),
+      body: JSON.stringify({ name: ed.name, photo_url: ed.photo_url || null }),
     });
+    cancelEdit(p.id);
+    load();
+  }
+
+  async function deleteParticipant(pid: string) {
+    if (!confirm('Delete this participant?')) return;
+    await fetch(`/api/shows/${id}/participants/${pid}`, { method: 'DELETE' });
+    load();
+  }
+
+  async function fetchParticipants() {
+    if (!show) return;
+    setFetching(true);
+    setFetchMsg('');
+    const res = await fetch(`/api/admin/shows/${id}/fetch-participants`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ showName: show.name }),
+    });
+    if (!res.ok) {
+      const j = await res.json();
+      setFetchMsg(j.error ?? 'Not found');
+      setFetching(false);
+      return;
+    }
+    const fetched: { name: string; photo_url: string | null }[] = await res.json();
+    // Insert all fetched participants
+    await Promise.all(fetched.map((p) =>
+      fetch(`/api/shows/${id}/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(p),
+      })
+    ));
+    setFetchMsg(`Added ${fetched.length} participants`);
+    setFetching(false);
     load();
   }
 
@@ -87,44 +146,88 @@ export default function AdminShowDetailPage() {
       <div className="grid md:grid-cols-2 gap-8">
         {/* Participants */}
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Participants</h2>
-          <form onSubmit={addParticipant} className="flex gap-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Participants</h2>
+            <button
+              onClick={fetchParticipants}
+              disabled={fetching}
+              className="text-sm bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 disabled:opacity-50"
+            >
+              {fetching ? 'Fetching…' : '✦ Auto-fetch'}
+            </button>
+          </div>
+          {fetchMsg && <p className="text-sm text-green-600">{fetchMsg}</p>}
+
+          {/* Add participant */}
+          <form onSubmit={addParticipant} className="bg-white rounded-xl shadow p-3 space-y-2">
             <input
               required
               value={pName}
               onChange={(e) => setPName(e.target.value)}
-              placeholder="Participant name"
-              className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Name"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+            <div className="flex gap-2 items-center">
+              <input
+                value={pPhoto}
+                onChange={(e) => setPPhoto(e.target.value)}
+                placeholder="Photo URL (optional)"
+                className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              {pPhoto && <PhotoPreview url={pPhoto} />}
+            </div>
             <button
               type="submit"
               disabled={pLoading}
-              className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50"
+              className="w-full bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50"
             >
-              Add
+              {pLoading ? 'Adding…' : 'Add participant'}
             </button>
           </form>
+
+          {/* Participant list */}
           <div className="bg-white rounded-xl shadow overflow-hidden">
-            <table className="w-full text-sm">
-              <tbody className="divide-y">
-                {participants.map((p) => (
-                  <tr key={p.id}>
-                    <td className="px-4 py-3 font-medium">{p.name}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => toggleParticipant(p)}
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                      >
-                        {p.is_active ? 'Active' : 'Eliminated'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {!participants.length && (
-                  <tr><td className="px-4 py-4 text-center text-gray-400">No participants yet</td></tr>
-                )}
-              </tbody>
-            </table>
+            {!participants.length && (
+              <p className="px-4 py-4 text-center text-gray-400 text-sm">No participants yet</p>
+            )}
+            {participants.map((p) => {
+              const ed = editing[p.id];
+              return (
+                <div key={p.id} className="border-b last:border-0 px-4 py-3">
+                  {ed ? (
+                    <div className="space-y-2">
+                      <input
+                        value={ed.name}
+                        onChange={(e) => setEditing((prev) => ({ ...prev, [p.id]: { ...prev[p.id], name: e.target.value } }))}
+                        className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <div className="flex gap-2 items-center">
+                        <input
+                          value={ed.photo_url}
+                          onChange={(e) => setEditing((prev) => ({ ...prev, [p.id]: { ...prev[p.id], photo_url: e.target.value } }))}
+                          placeholder="Photo URL"
+                          className="flex-1 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        {ed.photo_url && <PhotoPreview url={ed.photo_url} />}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => saveEdit(p)} className="text-sm bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700">Save</button>
+                        <button onClick={() => cancelEdit(p.id)} className="text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <PhotoPreview url={p.photo_url ?? ''} />
+                      <span className="flex-1 text-sm font-medium" dir="rtl">{p.name}</span>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => startEdit(p)} className="text-xs text-indigo-600 hover:underline">Edit</button>
+                        <button onClick={() => deleteParticipant(p.id)} className="text-xs text-red-500 hover:underline">Delete</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -177,10 +280,7 @@ export default function AdminShowDetailPage() {
                     {ep.status}
                   </span>
                   {ep.status !== 'resolved' && (
-                    <Link
-                      href={`/admin/shows/${id}/episodes/${ep.id}`}
-                      className="text-xs text-indigo-600 hover:underline"
-                    >
+                    <Link href={`/admin/shows/${id}/episodes/${ep.id}`} className="text-xs text-indigo-600 hover:underline">
                       Resolve
                     </Link>
                   )}
