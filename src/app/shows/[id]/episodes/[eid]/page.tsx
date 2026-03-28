@@ -5,6 +5,41 @@ import Link from 'next/link';
 import type { Episode, Participant, Bet } from '@/lib/types';
 import { format } from 'date-fns';
 
+function ParticipantCard({
+  participant,
+  selected,
+  onClick,
+}: {
+  participant: Participant;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition text-center w-full ${
+        selected
+          ? 'border-indigo-500 bg-indigo-50'
+          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+      }`}
+    >
+      {participant.photo_url ? (
+        <img
+          src={participant.photo_url}
+          alt={participant.name}
+          className="w-16 h-16 rounded-full object-cover bg-gray-100"
+        />
+      ) : (
+        <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl text-gray-400">
+          👤
+        </div>
+      )}
+      <span className="text-xs font-medium leading-tight" dir="rtl">{participant.name}</span>
+    </button>
+  );
+}
+
 export default function BetPage() {
   const { id, eid } = useParams<{ id: string; eid: string }>();
   const router = useRouter();
@@ -37,6 +72,10 @@ export default function BetPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!eliminated || !winner) {
+      setError('Please select both an eliminated pair and a winning pair');
+      return;
+    }
     setSaving(true);
     setError('');
     const res = await fetch('/api/bets', {
@@ -70,8 +109,8 @@ export default function BetPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-xl shadow p-8 max-w-md w-full">
+    <div className="min-h-screen bg-gray-50 px-4 py-8">
+      <div className="max-w-2xl mx-auto">
         <Link href={`/shows/${id}`} className="text-sm text-indigo-600 hover:underline mb-4 inline-block">← Back</Link>
         <h1 className="text-xl font-bold mb-1">
           Episode {episode.episode_number}{episode.title ? `: ${episode.title}` : ''}
@@ -79,41 +118,44 @@ export default function BetPage() {
         <p className="text-sm text-gray-400 mb-6">
           Airs {format(new Date(episode.air_datetime), 'MMM d, yyyy HH:mm')} — bets lock at air time
         </p>
-        {existing && <p className="text-sm text-green-600 mb-4">You already placed a bet. You can update it below.</p>}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium mb-1">Who gets eliminated?</label>
-            <select
-              required
-              value={eliminated}
-              onChange={(e) => setEliminated(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Select participant…</option>
+        {existing && <p className="text-sm text-green-600 mb-4">You already placed a bet — you can update it below.</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Eliminated */}
+          <section>
+            <h2 className="font-semibold mb-3">Who gets eliminated this episode?</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {participants.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <ParticipantCard
+                  key={p.id}
+                  participant={p}
+                  selected={eliminated === p.id}
+                  onClick={() => setEliminated(p.id)}
+                />
               ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Who wins the episode?</label>
-            <select
-              required
-              value={winner}
-              onChange={(e) => setWinner(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Select participant…</option>
+            </div>
+          </section>
+
+          {/* Winner */}
+          <section>
+            <h2 className="font-semibold mb-3">Who wins this episode?</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {participants.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <ParticipantCard
+                  key={p.id}
+                  participant={p}
+                  selected={winner === p.id}
+                  onClick={() => setWinner(p.id)}
+                />
               ))}
-            </select>
-          </div>
+            </div>
+          </section>
+
           {error && <p className="text-red-600 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-indigo-600 text-white rounded-lg px-4 py-2 font-semibold hover:bg-indigo-700 disabled:opacity-50"
+            className="w-full bg-indigo-600 text-white rounded-xl px-4 py-3 font-semibold hover:bg-indigo-700 disabled:opacity-50"
           >
             {saving ? 'Saving…' : existing ? 'Update bet' : 'Place bet'}
           </button>

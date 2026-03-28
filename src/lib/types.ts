@@ -10,6 +10,7 @@ export interface Participant {
   id: string;
   show_id: string;
   name: string;
+  photo_url: string | null;
   is_active: boolean;
   created_at: string;
 }
