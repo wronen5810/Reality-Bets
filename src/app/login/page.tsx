@@ -1,40 +1,37 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-browser';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const supabase = createBrowserSupabase();
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.toLowerCase().trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
-    }
-  }
 
-  if (sent) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow p-8 max-w-sm w-full text-center">
-          <div className="text-4xl mb-4">📧</div>
-          <h1 className="text-xl font-bold mb-2">Check your email</h1>
-          <p className="text-gray-600">We sent a magic link to <strong>{email}</strong>. Click it to sign in.</p>
-        </div>
-      </div>
-    );
+    const res = await fetch('/api/auth/instant-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!res.ok) {
+      const j = await res.json();
+      setError(j.error ?? 'Login failed');
+      setLoading(false);
+      return;
+    }
+
+    const { access_token, refresh_token } = await res.json();
+    const supabase = createBrowserSupabase();
+    await supabase.auth.setSession({ access_token, refresh_token });
+    router.push('/');
+    router.refresh();
   }
 
   return (
@@ -57,7 +54,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-indigo-600 text-white rounded-lg px-4 py-2 font-semibold hover:bg-indigo-700 disabled:opacity-50"
           >
-            {loading ? 'Sending…' : 'Send magic link'}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
       </div>
