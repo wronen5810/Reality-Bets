@@ -80,6 +80,15 @@ export default function AdminShowDetailPage() {
     load();
   }
 
+  async function toggleParticipant(p: Participant) {
+    await fetch(`/api/shows/${id}/participants/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !p.is_active }),
+    });
+    load();
+  }
+
   async function deleteParticipant(pid: string) {
     if (!confirm('Delete this participant?')) return;
     await fetch(`/api/shows/${id}/participants/${pid}`, { method: 'DELETE' });
@@ -221,14 +230,7 @@ export default function AdminShowDetailPage() {
                       <span className={`flex-1 text-sm font-medium ${!p.is_active ? 'line-through text-gray-400' : ''}`} dir="rtl">{p.name}</span>
                       <div className="flex gap-2 shrink-0 items-center">
                         <button
-                          onClick={async () => {
-                            await fetch(`/api/shows/${id}/participants/${p.id}`, {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ is_active: !p.is_active }),
-                            });
-                            load();
-                          }}
+                          onClick={() => toggleParticipant(p)}
                           className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}
                         >
                           {p.is_active ? 'Active' : 'Eliminated'}
