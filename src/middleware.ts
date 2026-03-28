@@ -27,9 +27,9 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Admin routes
+  // Admin routes — require logged-in AND admin email
   if (pathname.startsWith('/admin')) {
-    if (!user) {
+    if (!user || user.email !== process.env.ADMIN_EMAIL) {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
     return response;
