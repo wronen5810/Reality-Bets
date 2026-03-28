@@ -29,9 +29,8 @@ export async function middleware(request: NextRequest) {
 
   // Admin routes — require logged-in AND admin email
   if (pathname.startsWith('/admin')) {
-    if (!user || user.email !== process.env.ADMIN_EMAIL) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
+    if (!user) return NextResponse.redirect(new URL('/admin/login', request.url));
+    if (user.email !== process.env.ADMIN_EMAIL) return NextResponse.redirect(new URL('/', request.url));
     return response;
   }
 
