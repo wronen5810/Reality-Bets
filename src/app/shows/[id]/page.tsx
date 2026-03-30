@@ -25,7 +25,7 @@ export default async function ShowPage({ params }: { params: Promise<{ id: strin
     supabase.from('shows').select('*').eq('id', id).single(),
     supabase.from('episodes').select('*').eq('show_id', id).order('episode_number'),
     supabase.from('participants').select('*').eq('show_id', id),
-    supabase.from('points').select('user_email, points').eq('show_id', id),
+    supabase.from('points').select('user_email, episode_id, points').eq('show_id', id),
     supabase.from('allowed_users').select('email, display_name, is_active'),
     supabase.from('bets').select('*').eq('user_email', auth.user.email),
   ]);
@@ -48,6 +48,10 @@ export default async function ShowPage({ params }: { params: Promise<{ id: strin
 
   const participantMap = new Map((participants as Participant[])?.map((p) => [p.id, p.name]));
   const myBetMap = new Map((myBets as Bet[])?.map((b) => [b.episode_id, b]));
+  const myPointsMap = new Map(
+    (pts ?? []).filter((p: { user_email: string }) => p.user_email === auth.user.email)
+      .map((p: { episode_id: string; points: number }) => [p.episode_id, p.points])
+  );
   const now = new Date();
 
   return (
@@ -78,9 +82,16 @@ export default async function ShowPage({ params }: { params: Promise<{ id: strin
                           {format(new Date(ep.air_datetime), 'MMM d, yyyy HH:mm')}
                         </p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ep.status === 'resolved' ? 'bg-green-100 text-green-700' : isLocked ? 'bg-gray-100 text-gray-500' : 'bg-indigo-100 text-indigo-700'}`}>
-                        {ep.status === 'resolved' ? 'Resolved' : isLocked ? 'Locked' : 'Open'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {ep.status === 'resolved' && myBetMap.has(ep.id) && (
+                          <span className="text-lg leading-none">
+                            {(myPointsMap.get(ep.id) ?? 0) > 0 ? '😊' : '😞'}
+                          </span>
+                        )}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ep.status === 'resolved' ? 'bg-green-100 text-green-700' : isLocked ? 'bg-gray-100 text-gray-500' : 'bg-indigo-100 text-indigo-700'}`}>
+                          {ep.status === 'resolved' ? 'Resolved' : isLocked ? 'Locked' : 'Open'}
+                        </span>
+                      </div>
                     </div>
 
                     {ep.status === 'resolved' && (
