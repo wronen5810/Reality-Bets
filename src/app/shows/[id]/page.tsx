@@ -83,7 +83,7 @@ export default async function ShowPage({ params }: { params: Promise<{ id: strin
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        {ep.status === 'resolved' && myBetMap.has(ep.id) && (
+                        {ep.status === 'resolved' && (
                           <span className="text-lg leading-none">
                             {(myPointsMap.get(ep.id) ?? 0) > 0 ? '😊' : '😞'}
                           </span>
