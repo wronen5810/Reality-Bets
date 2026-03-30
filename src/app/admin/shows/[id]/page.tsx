@@ -348,6 +348,16 @@ export default function AdminShowDetailPage() {
                       Resolve
                     </Link>
                   )}
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Delete this episode?')) return;
+                      await fetch(`/api/shows/${id}/episodes/${ep.id}`, { method: 'DELETE' });
+                      load();
+                    }}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
