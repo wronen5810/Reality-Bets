@@ -150,14 +150,16 @@ export default function AdminShowDetailPage() {
       return;
     }
     const fetched: { episode_number: number; air_datetime: string }[] = await res.json();
-    await Promise.all(fetched.map((ep) =>
+    const now = new Date();
+    const future = fetched.filter((ep) => new Date(ep.air_datetime) > now);
+    await Promise.all(future.map((ep) =>
       fetch(`/api/shows/${id}/episodes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ep),
       })
     ));
-    setFetchEpMsg(`Added ${fetched.length} episodes`);
+    setFetchEpMsg(`Added ${future.length} episodes`);
     setFetchingEp(false);
     load();
   }
