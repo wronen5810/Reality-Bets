@@ -34,6 +34,10 @@ export default function AdminShowDetailPage() {
   const [epDatetime, setEpDatetime] = useState('');
   const [epLoading, setEpLoading] = useState(false);
 
+  // Fetch episodes
+  const [fetchingEp, setFetchingEp] = useState(false);
+  const [fetchEpMsg, setFetchEpMsg] = useState('');
+
   async function load() {
     const [s, p, e] = await Promise.all([
       fetch(`/api/shows/${id}`).then((r) => r.json()),
@@ -127,6 +131,34 @@ export default function AdminShowDetailPage() {
     ));
     setFetchMsg(`Added ${fetched.length} participants`);
     setFetching(false);
+    load();
+  }
+
+  async function fetchEpisodes() {
+    if (!show) return;
+    setFetchingEp(true);
+    setFetchEpMsg('');
+    const res = await fetch(`/api/admin/shows/${id}/fetch-episodes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ showName: show.name }),
+    });
+    if (!res.ok) {
+      const j = await res.json();
+      setFetchEpMsg(j.error ?? 'Not found');
+      setFetchingEp(false);
+      return;
+    }
+    const fetched: { episode_number: number; air_datetime: string }[] = await res.json();
+    await Promise.all(fetched.map((ep) =>
+      fetch(`/api/shows/${id}/episodes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ep),
+      })
+    ));
+    setFetchEpMsg(`Added ${fetched.length} episodes`);
+    setFetchingEp(false);
     load();
   }
 
@@ -255,7 +287,17 @@ export default function AdminShowDetailPage() {
 
         {/* Episodes */}
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Episodes</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Episodes</h2>
+            <button
+              onClick={fetchEpisodes}
+              disabled={fetchingEp}
+              className="text-sm bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 disabled:opacity-50"
+            >
+              {fetchingEp ? 'Fetching…' : '✦ Auto-fetch'}
+            </button>
+          </div>
+          {fetchEpMsg && <p className="text-sm text-green-600">{fetchEpMsg}</p>}
           <form onSubmit={addEpisode} className="bg-white rounded-xl shadow p-4 space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <input
