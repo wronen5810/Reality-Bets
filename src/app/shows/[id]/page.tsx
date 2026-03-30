@@ -69,8 +69,13 @@ export default async function ShowPage({ params }: { params: Promise<{ id: strin
             <h2 className="text-lg font-semibold mb-3">Episodes</h2>
             <div className="space-y-3">
               {(episodes as Episode[])?.map((ep) => {
-                const isLocked = new Date(ep.air_datetime) <= now;
+                const airDate = new Date(ep.air_datetime);
+                const isLocked = airDate <= now;
                 const myBet = myBetMap.get(ep.id);
+                const msLeft = airDate.getTime() - now.getTime();
+                const hoursLeft = Math.floor(msLeft / 3600000);
+                const minutesLeft = Math.floor((msLeft % 3600000) / 60000);
+                const timeLeft = `${String(hoursLeft).padStart(2, '0')}:${String(minutesLeft).padStart(2, '0')}`;
                 return (
                   <div key={ep.id} className="bg-white rounded-xl shadow p-4">
                     <div className="flex items-start justify-between">
@@ -87,6 +92,12 @@ export default async function ShowPage({ params }: { params: Promise<{ id: strin
                           <span className="text-lg leading-none">
                             {(myPointsMap.get(ep.id) ?? 0) > 0 ? '😊' : '😞'}
                           </span>
+                        )}
+                        {ep.status !== 'resolved' && !isLocked && (
+                          <div className="text-right">
+                            <p className="text-xs text-gray-400">זמן שנשאר</p>
+                            <p className="text-sm font-mono font-medium text-indigo-600">{timeLeft}</p>
+                          </div>
                         )}
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ep.status === 'resolved' ? 'bg-green-100 text-green-700' : isLocked ? 'bg-gray-100 text-gray-500' : 'bg-indigo-100 text-indigo-700'}`}>
                           {ep.status === 'resolved' ? 'Resolved' : isLocked ? 'Locked' : 'Open'}
