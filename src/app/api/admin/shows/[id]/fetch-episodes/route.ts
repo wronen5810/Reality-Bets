@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 
 // Known episode schedules indexed by show name (Hebrew)
 const KNOWN_EPISODES: Record<string, { episode_number: number; air_datetime: string }[]> = {
-  'המירוץ למיליון 2026': [
+  'האח הגדול': [
     { episode_number: 1,  air_datetime: '2026-01-21T19:00:00Z' },
     { episode_number: 2,  air_datetime: '2026-01-28T19:00:00Z' },
     { episode_number: 3,  air_datetime: '2026-02-04T19:00:00Z' },
