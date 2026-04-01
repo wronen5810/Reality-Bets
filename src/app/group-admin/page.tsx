@@ -1,72 +1,59 @@
 'use client';
-import { useEffect, useState } from 'react';
-import type { GroupWithDetails } from '@/lib/types';
+import { useGroup } from './GroupContext';
+import Link from 'next/link';
 
 export default function GroupAdminPage() {
-  const [groups, setGroups] = useState<GroupWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    fetch('/api/group-admin/info')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load group info');
-        return res.json();
-      })
-      .then((data) => {
-        setGroups(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
+  const { selectedGroup, groups, loading } = useGroup();
 
   if (loading) return <p className="text-gray-400 text-sm">Loading…</p>;
-  if (error) return <p className="text-red-500 text-sm">{error}</p>;
+  if (!groups.length) return <p className="text-gray-500">You are not an admin of any group.</p>;
+  if (!selectedGroup) return <p className="text-gray-500">Select a group above.</p>;
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Group Overview</h1>
-      {!groups.length && <p className="text-gray-500">You are not an admin of any group.</p>}
-      <div className="space-y-6">
-        {groups.map((group) => (
-          <div key={group.id} className="bg-white rounded-xl shadow p-5">
-            <h2 className="text-lg font-semibold mb-3">{group.name}</h2>
+      <h1 className="text-2xl font-bold mb-1">{selectedGroup.name}</h1>
+      <p className="text-sm text-gray-500 mb-6">Group overview</p>
 
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Members</h3>
-              {!group.members.length && <p className="text-sm text-gray-400">No members yet.</p>}
-              <div className="space-y-1">
-                {group.members.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
-                    <span className="font-medium">{m.display_name ?? m.user_email}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400 text-xs">{m.user_email}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${m.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {m.role}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <Link href="/group-admin/users" className="bg-white rounded-xl shadow p-5 hover:shadow-md transition text-center">
+          <p className="text-3xl font-bold text-indigo-600">{selectedGroup.members.length}</p>
+          <p className="text-gray-500 text-sm mt-1">Members</p>
+        </Link>
+        <Link href="/group-admin/shows" className="bg-white rounded-xl shadow p-5 hover:shadow-md transition text-center">
+          <p className="text-3xl font-bold text-indigo-600">{selectedGroup.shows.length}</p>
+          <p className="text-gray-500 text-sm mt-1">Linked Shows</p>
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-5 mb-4">
+        <h2 className="font-semibold text-sm text-gray-700 mb-3">Members</h2>
+        {!selectedGroup.members.length && <p className="text-sm text-gray-400">No members yet.</p>}
+        <div className="space-y-1">
+          {selectedGroup.members.map((m) => (
+            <div key={m.id} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+              <span className="font-medium">{m.display_name ?? m.user_email}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400 text-xs">{m.user_email}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${m.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {m.role}
+                </span>
               </div>
             </div>
+          ))}
+        </div>
+      </div>
 
-            <div>
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Linked Shows</h3>
-              {!group.shows.length && <p className="text-sm text-gray-400">No shows linked.</p>}
-              <div className="space-y-1">
-                {group.shows.map((s) => (
-                  <div key={s.id} className="text-sm bg-gray-50 rounded-lg px-3 py-2">
-                    <span className="font-medium">{s.name}</span>
-                    {s.description && <span className="text-gray-400 ml-2">{s.description}</span>}
-                  </div>
-                ))}
-              </div>
+      <div className="bg-white rounded-xl shadow p-5">
+        <h2 className="font-semibold text-sm text-gray-700 mb-3">Linked Shows</h2>
+        {!selectedGroup.shows.length && <p className="text-sm text-gray-400">No shows linked. <Link href="/group-admin/shows" className="text-indigo-600 hover:underline">Add one →</Link></p>}
+        <div className="space-y-1">
+          {selectedGroup.shows.map((s) => (
+            <div key={s.id} className="text-sm bg-gray-50 rounded-lg px-3 py-2 flex items-center justify-between">
+              <span className="font-medium">{s.name}</span>
+              {s.description && <span className="text-gray-400 text-xs">{s.description}</span>}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
