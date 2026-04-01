@@ -110,7 +110,7 @@ function LoginForm({ type }: { type: 'member' | 'group-admin' }) {
   }
 
   return (
-    <div className="mt-5 border-t border-gray-100 pt-5">
+    <div className="mt-5 border-t border-gray-100 pt-5" onClick={(e) => e.stopPropagation()}>
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           type="email"
