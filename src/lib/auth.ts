@@ -33,3 +33,32 @@ export async function requireUser(): Promise<{ user: { email: string } } | { err
   }
   return { user: { email: user.email } };
 }
+
+export async function requireGroupAdmin(): Promise<{ user: { email: string }; groupIds: string[] } | { error: NextResponse }> {
+  const user = await getSessionUser();
+  if (!user?.email) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+  const { createServiceSupabase } = await import('./supabase-server');
+  const supabase = createServiceSupabase();
+  const { data } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .eq('user_email', user.email)
+    .eq('role', 'admin');
+  const groupIds = (data ?? []).map((r: { group_id: string }) => r.group_id);
+  if (groupIds.length === 0) {
+    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  }
+  return { user: { email: user.email }, groupIds };
+}
+
+export async function getUserGroupIds(email: string): Promise<string[]> {
+  const { createServiceSupabase } = await import('./supabase-server');
+  const supabase = createServiceSupabase();
+  const { data } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .eq('user_email', email);
+  return (data ?? []).map((r: { group_id: string }) => r.group_id);
+}

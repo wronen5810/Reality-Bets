@@ -54,6 +54,34 @@ export interface Points {
   created_at: string;
 }
 
+export interface Group {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface GroupMember {
+  id: string;
+  group_id: string;
+  user_email: string;
+  role: 'admin' | 'member';
+  created_at: string;
+}
+
+export interface GroupWithCounts extends Group {
+  member_count: number;
+  show_count: number;
+}
+
+export interface GroupMemberWithDisplay extends GroupMember {
+  display_name: string | null;
+}
+
+export interface GroupWithDetails extends Group {
+  members: GroupMemberWithDisplay[];
+  shows: Show[];
+}
+
 export interface LeaderboardEntry {
   user_email: string;
   display_name: string;

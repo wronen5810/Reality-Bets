@@ -3,28 +3,25 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-browser';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function GroupAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
   async function signOut() {
     await createBrowserSupabase().auth.signOut();
-    router.push('/admin/login');
+    router.push('/login');
   }
 
   const nav = [
-    { href: '/admin', label: 'Dashboard' },
-    { href: '/admin/shows', label: 'Shows' },
-    { href: '/admin/users', label: 'Users' },
-    { href: '/admin/groups', label: 'Groups' },
+    { href: '/group-admin', label: 'Dashboard' },
+    { href: '/group-admin/users', label: 'Members' },
+    { href: '/group-admin/participants', label: 'Participants' },
   ];
-
-  if (pathname === '/admin/login') return <>{children}</>;
 
   return (
     <div className="min-h-screen flex flex-col">
       <nav className="bg-indigo-700 text-white px-4 py-3 flex items-center gap-6">
-        <span className="font-bold">Admin</span>
+        <span className="font-bold">My Group</span>
         {nav.map((n) => (
           <Link
             key={n.href}
